@@ -2,6 +2,41 @@
 
 ## Description
 This script uses a Flask app and the Fortigate API to update DNS records based on DHCP events.
+When a FortiGate is acting as a DNS & DHCP server, DNS entries are not automatically updated when DHCP assigns addresses. This script addresses the aforementioned shortcoming.
+
+## Create API User, Access profile & API key on FortiGate
+### Create API User Access Profile
+```
+config system accprofile
+ edit `accprofile-name`
+  set secfabgrp read
+  set ftviewgrp read
+  set authgrp read
+  set sysgrp read-write
+  set netgrp read-write
+  set loggrp read
+  set fwgrp read
+  set vpngrp read
+  set utmgrp read
+  set wifi read
+ next
+end
+```
+
+### Create API User
+```
+config system api-user
+ edit `api-username`
+  set accprofile `accprofile-name`
+  set vdom "root"
+ next
+end
+```
+
+### Create API User Access Profile
+```
+exec api-user generate-key dns-updater
+```
 
 ## Installation
 1. Install Flask and any other necessary libraries: `pip install flask`.
