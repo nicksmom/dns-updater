@@ -8,7 +8,7 @@ When a FortiGate is acting as a DNS & DHCP server, DNS entries are not automatic
 ### Create API User Access Profile
 ```
 config system accprofile
- edit **accprofile-name**
+ edit <accprofile-name>
   set secfabgrp read
   set ftviewgrp read
   set authgrp read
@@ -26,8 +26,8 @@ end
 ### Create API User
 ```
 config system api-user
- edit **api-username**
-  set accprofile **accprofile-name**
+ edit <api-username>
+  set accprofile <accprofile-name>
   set vdom "root"
  next
 end
