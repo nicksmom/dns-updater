@@ -35,7 +35,7 @@ end
 
 ### Create API User Access Profile
 ```
-exec api-user generate-key **api-username**
+exec api-user generate-key <api-username>
 ```
 
 ## Installation
