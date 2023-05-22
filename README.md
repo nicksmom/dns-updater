@@ -4,7 +4,7 @@
 This script uses a Flask app and the Fortigate API to update DNS records based on DHCP events.
 When a FortiGate is acting as a DNS & DHCP server, DNS entries are not automatically updated when DHCP assigns addresses. This script addresses the aforementioned shortcoming.
 
-## Create API User, Access profile & API key on FortiGate
+## On FortiGate, Create API User, Access profile & API_TOKEN
 ### Create API User Access Profile
 ```
 config system accprofile
@@ -33,13 +33,12 @@ config system api-user
 end
 ```
 
-### Create API User Access Profile
+### Generate API_TOKEN
 ```
 exec api-user generate-key <api-username>
 ```
 
-## Create Automation Stitch on FortiGate
-
+## On FortiGate, create Automation Stitch
 ### Create Automation Trigger based on DHCP event log
 
 ```
@@ -94,11 +93,14 @@ end
 ## Installation
 1. Install Flask and any other necessary libraries: `pip install flask`.
 2. Set the API_TOKEN environment variable: `export API_TOKEN=your_api_token_here`.
-3. Clone repository: `git clone git clone https://github.com/nicksmom/dns-updater.git`
-4. Open the dns-updater.py script with a text editor, and update the following lines accordingly: ```# The database name and Fortigate URL should be stored securely
+3. Clone repository: `git clone https://github.com/nicksmom/dns-updater.git`
+4. Open the dns-updater.py script with a text editor, and update the following lines accordingly:
+```
+# The database name and Fortigate URL should be stored securely
 DATABASE_NAME = 'local'
-FGT_URL = 'https://192.168.1.1/api/v2/cmdb/system/dns-database/'```
-5. 6. Make sure the script is executable: `chmod +x dns_updater.py`.
+FGT_URL = 'https://192.168.1.1/api/v2/cmdb/system/dns-database/'
+```
+5. Make sure the script is executable: `chmod +x dns_updater.py`.
 
 ## Usage
 To start the Flask app, run: `./dns_updater.py`.
