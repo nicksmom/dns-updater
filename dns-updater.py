@@ -9,8 +9,8 @@ requests.packages.urllib3.disable_warnings()
 app = Flask(__name__)
 
 # The database name and Fortigate URL should be stored securely
-DATABASE_NAME = 'Spoon'
-FGT_URL = 'https://10.224.128.1:1443/api/v2/cmdb/system/dns-database/'
+DATABASE_NAME = 'local'
+FGT_URL = 'https://192.168.1.1/api/v2/cmdb/system/dns-database/'
 
 @app.route('/dns_update', methods=['POST'])
 def dns_update():
