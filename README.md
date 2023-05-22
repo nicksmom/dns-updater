@@ -38,6 +38,59 @@ end
 exec api-user generate-key <api-username>
 ```
 
+## Create Automation Stitch on FortiGate
+
+### Create Automation Trigger based on DHCP event log
+
+```
+config system automation-trigger
+ edit "DHCP Ack"
+  set event-type event-log
+  set logid 26001 26004
+ next
+end
+```
+
+### Create Automation Action webhook
+#### Update URI as needed for your environment
+#### URI must point to system running Flask app
+
+```
+config system automation-action
+ edit "Send DHCP IP & Hostname to Flask"
+  set action-type webhook
+  set uri "192.168.1.2/dns_update"
+  set http-body "{
+ \"ip\": \"%%log.ip%%\",
+ \"hostname\": \"%%log.hostname%%\"
+}"
+  set port 5000
+  config http-headers
+   edit 1
+    set key "Content-Type"
+    set value "application/json"
+   next
+  end
+ next
+end
+```
+
+### Create Automation Stitch using previously created trigger & action
+
+```
+config system automation-stitch
+ edit "Add DNS Entry from DHCP Log"
+  set trigger "DHCP Ack"
+  config actions
+   edit 1
+    set action "Send DHCP IP & Hostname to Flask"
+    set required enable
+   next
+  end
+ next
+end
+```
+
 ## Installation
 1. Install Flask and any other necessary libraries: `pip install flask`.
 2. Set the API_TOKEN environment variable: `export API_TOKEN=your_api_token_here`.
