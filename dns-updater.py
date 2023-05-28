@@ -10,6 +10,7 @@ requests.packages.urllib3.disable_warnings()
 
 app = Flask(__name__)
 
+<<<<<<< HEAD
 # The database name and Fortigate URL should be stored securely
 <<<<<<< HEAD
 DATABASE_NAME = 'local'
@@ -24,6 +25,8 @@ handler.setLevel(logging.INFO)  # Log info and above to file
 app.logger.addHandler(handler)
 >>>>>>> branch2
 
+=======
+>>>>>>> dec37ade972140c851680815f4c8546b93e4e120
 @app.route('/dns_update', methods=['POST'])
 def dns_update():
     data = json.loads(request.data)
