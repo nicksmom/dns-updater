@@ -94,7 +94,9 @@ end
 ## Installation
 1. Install Flask and any other necessary libraries: `pip install flask`.
 2. Set the API_TOKEN environment variable: `export API_TOKEN=your_api_token_here`.
-3. Make sure the script is executable: `chmod +x dns_updater.py`.
+3. Set the DATABASE_NAME environment variable: `export DATABASE_NAME=localdb`
+4. Set the FGT_URL environment variable: `export FGT_URL=https://192.168.1.1/api/v2/cmdb/system/dns-database/`
+5. Make sure the script is executable: `chmod +x dns_updater.py`.
 
 ## Usage
 To start the Flask app, run: `./dns_updater.py`.

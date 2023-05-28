@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 import requests
 import os
 import json
+import logging
+from logging.handlers import RotatingFileHandler
 
 # Disable SSL warnings
 requests.packages.urllib3.disable_warnings()
@@ -9,8 +11,13 @@ requests.packages.urllib3.disable_warnings()
 app = Flask(__name__)
 
 # The database name and Fortigate URL should be stored securely
-DATABASE_NAME = 'Spoon'
-FGT_URL = 'https://10.224.128.1:1443/api/v2/cmdb/system/dns-database/'
+DATABASE_NAME = os.getenv('DATABASE_NAME', 'local')  # default to 'local' if DATABASE_NAME is not set
+FGT_URL = os.getenv('FGT_URL', 'https://192.168.1.1/api/v2/cmdb/system/dns-database/')  # default to the given URL if FGT_URL is not set
+
+# Setup logging
+handler = RotatingFileHandler('dns_update.log', maxBytes=10*1024*1024, backupCount=1)  # Will keep 1 old log file, each 10MB big
+handler.setLevel(logging.INFO)  # Log info and above to file
+app.logger.addHandler(handler)
 
 @app.route('/dns_update', methods=['POST'])
 def dns_update():
