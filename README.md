@@ -93,6 +93,7 @@ end
 ## Installation
 1. Install Flask and any other necessary libraries: `pip install flask`.
 2. Set the API_TOKEN environment variable: `export API_TOKEN=your_api_token_here`.
+<<<<<<< HEAD
 3. Clone repository: `git clone https://github.com/nicksmom/dns-updater.git`
 4. Open the dns-updater.py script with a text editor, and update the following lines accordingly:
 ```
@@ -100,6 +101,10 @@ end
 DATABASE_NAME = 'local'
 FGT_URL = 'https://192.168.1.1/api/v2/cmdb/system/dns-database/'
 ```
+=======
+3. Set the DATABASE_NAME environment variable: `export DATABASE_NAME=localdb`
+4. Set the FGT_URL environment variable: `export FGT_URL=https://192.168.1.1/api/v2/cmdb/system/dns-database/`
+>>>>>>> branch2
 5. Make sure the script is executable: `chmod +x dns_updater.py`.
 
 ## Usage
