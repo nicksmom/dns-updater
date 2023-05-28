@@ -10,12 +10,7 @@ requests.packages.urllib3.disable_warnings()
 
 app = Flask(__name__)
 
-<<<<<<< HEAD
 # The database name and Fortigate URL should be stored securely
-<<<<<<< HEAD
-DATABASE_NAME = 'local'
-FGT_URL = 'https://192.168.1.1/api/v2/cmdb/system/dns-database/'
-=======
 DATABASE_NAME = os.getenv('DATABASE_NAME', 'local')  # default to 'local' if DATABASE_NAME is not set
 FGT_URL = os.getenv('FGT_URL', 'https://192.168.1.1/api/v2/cmdb/system/dns-database/')  # default to the given URL if FGT_URL is not set
 
@@ -23,10 +18,6 @@ FGT_URL = os.getenv('FGT_URL', 'https://192.168.1.1/api/v2/cmdb/system/dns-datab
 handler = RotatingFileHandler('dns_update.log', maxBytes=10*1024*1024, backupCount=1)  # Will keep 1 old log file, each 10MB big
 handler.setLevel(logging.INFO)  # Log info and above to file
 app.logger.addHandler(handler)
->>>>>>> branch2
-
-=======
->>>>>>> dec37ade972140c851680815f4c8546b93e4e120
 @app.route('/dns_update', methods=['POST'])
 def dns_update():
     data = json.loads(request.data)
