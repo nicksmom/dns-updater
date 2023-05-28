@@ -93,25 +93,13 @@ end
 ## Installation
 1. Install Flask and any other necessary libraries: `pip install flask`.
 2. Set the API_TOKEN environment variable: `export API_TOKEN=your_api_token_here`.
-<<<<<<< HEAD
-<<<<<<< HEAD
 3. Clone repository: `git clone https://github.com/nicksmom/dns-updater.git`
-4. Open the dns-updater.py script with a text editor, and update the following lines accordingly:
-```
-# The database name and Fortigate URL should be stored securely
-DATABASE_NAME = 'local'
-FGT_URL = 'https://192.168.1.1/api/v2/cmdb/system/dns-database/'
-```
-=======
-3. Set the DATABASE_NAME environment variable: `export DATABASE_NAME=localdb`
-4. Set the FGT_URL environment variable: `export FGT_URL=https://192.168.1.1/api/v2/cmdb/system/dns-database/`
->>>>>>> branch2
-=======
->>>>>>> dec37ade972140c851680815f4c8546b93e4e120
-5. Make sure the script is executable: `chmod +x dns_updater.py`.
+4. Set the DATABASE_NAME environment variable: `export DATABASE_NAME=localdb`
+5. Set the FGT_URL environment variable: `export FGT_URL=https://192.168.1.1/api/v2/cmdb/system/dns-database/`
+6. Make sure the script is executable: `chmod +x dns_updater.py`.
 
 ## Usage
-To start the Flask app, run: `./dns_updater.py`.
+To start the Flask app, run: `python3 dns_updater.py`.
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
