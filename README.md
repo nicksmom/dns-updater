@@ -61,6 +61,7 @@ config system automation-action
   set uri "192.168.1.2/dns_update"
   set http-body "{
  \"ip\": \"%%log.ip%%\",
+ \"mac\": \"%%log.mac%%\",
  \"hostname\": \"%%log.hostname%%\"
 }"
   set port 5000
@@ -91,7 +92,7 @@ end
 ```
 
 ## Installation
-1. Install Flask and any other necessary libraries: `pip install flask`.
+1. Install Flask and any other necessary libraries: `pip install flask jsonify`.
 2. Set the API_TOKEN environment variable: `export API_TOKEN=your_api_token_here`.
 3. Clone repository: `git clone https://github.com/nicksmom/dns-updater.git`
 4. Set the DATABASE_NAME environment variable: `export DATABASE_NAME=localdb`
