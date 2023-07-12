@@ -98,8 +98,28 @@ end
 5. Set the FGT_URL environment variable: `export FGT_URL=https://192.168.1.1/api/v2/cmdb/system/dns-database/`
 6. Make sure the script is executable: `chmod +x dns_updater.py`.
 
-## Usage
-To start the Flask app, run: `python3 dns_updater.py`.
+## Enable Service
+1. Edit /etc/systemd/system/dns-update.service
+```
+[Unit]
+Description=DNS Updater Service for FortiGate
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /path/to/your_script/dns-updater.py
+WorkingDirectory=/path/to/your_script
+Restart=always
+User=pi
+Environment="API_TOKEN=your_api_token"
+Environment="DATABASE_NAME=my_database"
+Environment="FGT_URL=https://192.168.1.1/api/v2/cmdb/system/dns-database/"
+
+[Install]
+WantedBy=multi-user.target
+```
+2. Reload the systemd daemon to read the new file: sudo systemctl daemon-reload
+3. Enable service to start on boot: sudo systemctl enable dns-updater.service
+4. Start service: sudo systemctl start dns-updater.service
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
