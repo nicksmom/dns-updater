@@ -1,57 +1,76 @@
-from flask import Flask, request, jsonify
-import requests
 import os
 import json
-import logging
-from logging.handlers import RotatingFileHandler
+import requests
+import sched, time
+from flask import Flask, request, jsonify
+from threading import Thread
 
 # Disable SSL warnings
 requests.packages.urllib3.disable_warnings()
 
 app = Flask(__name__)
 
-# The database name and Fortigate URL should be stored securely
-DATABASE_NAME = os.getenv('DATABASE_NAME', 'local')  # default to 'local' if DATABASE_NAME is not set
-FGT_URL = os.getenv('FGT_URL', 'https://192.168.1.1/api/v2/cmdb/system/dns-database/')  # default to the given URL if FGT_URL is not set
+# URLs and database name
+DATABASE_NAME = os.getenv('DATABASE_NAME', 'local')
+FGT_DNS_URL = os.getenv('FGT_DNS_URL', 'https://192.168.1.1/api/v2/cmdb/system/dns-database/')
+FGT_DHCP_URL = os.getenv('FGT_DHCP_URL', 'https://192.168.1.1/api/v2/monitor/dhcp')
+API_TOKEN = os.getenv('API_TOKEN')
 
-# Setup logging
-handler = RotatingFileHandler('dns_update.log', maxBytes=10*1024*1024, backupCount=1)  # Will keep 1 old log file, each 10MB big
-handler.setLevel(logging.INFO)  # Log info and above to file
-app.logger.addHandler(handler)
-@app.route('/dns_update', methods=['POST'])
-def dns_update():
-    data = json.loads(request.data)
+headers = {'Authorization': f'Bearer {API_TOKEN}'}
 
-    # Check if required data is present
-    if not all(key in data for key in ('ip', 'hostname')):
-        return jsonify({'message': 'Invalid data, ip and hostname are required'}), 400
+scheduler = sched.scheduler(time.time, time.sleep)
 
-    print(f"Received data: {data}") # Print received data
-    ip = data['ip']
-    hostname = data['hostname']
+# Define a function to run the scheduler
+def run_scheduler():
+    scheduler.run()
 
-    headers = {'Authorization': f'Bearer {os.getenv("API_TOKEN")}'}
+def get_dhcp_data():
+    response = requests.get(FGT_DHCP_URL, headers=headers, verify=False)
+    data = response.json()
+    return data['results']
 
-    response = requests.get(f'{FGT_URL}{DATABASE_NAME}', headers=headers, verify=False)
-    print(f"GET Response: {response.text}") # Print GET response
-    dns_data = response.json()
-    dns_entries = dns_data['results'][0]['dns-entry']
+def get_dns_data():
+    response = requests.get(f'{FGT_DNS_URL}{DATABASE_NAME}', headers=headers, verify=False)
+    return response.json()['results'][0]['dns-entry']
 
-    for entry in dns_entries:
-        if entry['ip'] == ip and entry['hostname'] == hostname:
-            # If a record already exists that contains the same IP & the same hostname, do nothing.
-            print("Record exists with same IP and hostname") # Debug message
-            return jsonify({'message': 'Record exists with same IP and hostname'}), 200
-        elif entry['hostname'] == hostname or entry['ip'] == ip:
-            # If a record already exists with the same hostname but different IP, or same IP but different hostname,
-            # execute another API call to delete the old entry (HTTP DELETE)
-            response = requests.delete(f'{FGT_URL}{DATABASE_NAME}/{entry["id"]}', headers=headers, verify=False)
-            print(f"DELETE Response: {response.text}") # Print DELETE response
-            if response.status_code != 204:
-                return jsonify({'message': 'Failed to delete record'}), 500
+def compare_and_update():
+    dhcp_data = get_dhcp_data()
+    dns_data = get_dns_data()
 
-    # If there are no entries present that contain the IP or hostname from DHCP event log,
-    # use the HTTP PUT method to add a new entry without removing existing ones.
+    for dhcp_entry in dhcp_data:
+        dhcp_ip = dhcp_entry['ip']
+        
+        # Check if 'hostname' key exists
+        if 'hostname' in dhcp_entry:
+            dhcp_hostname = dhcp_entry['hostname']
+        else:
+            # If 'hostname' key doesn't exist, skip this iteration
+            continue
+
+        matching_dns_entries = [entry for entry in dns_data if entry['ip'] == dhcp_ip]
+
+        if not matching_dns_entries:
+            # Add new DNS entry
+            add_dns_entry(dhcp_ip, dhcp_hostname)
+        else:
+            for dns_entry in matching_dns_entries:
+                if dns_entry['hostname'] != dhcp_hostname:
+                    # Delete old entry and add new one
+                    delete_dns_entry(dns_entry['id'])
+                    add_dns_entry(dhcp_ip, dhcp_hostname)
+
+    # Schedule next run
+    scheduler.enter(180, 1, compare_and_update)
+
+def add_dns_entry(ip, hostname):
+    dns_data = get_dns_data()
+
+    # Check if a DNS entry with the same hostname already exists
+    matching_dns_entries = [entry for entry in dns_data if entry['hostname'] == hostname]
+    if matching_dns_entries:
+        print(f"DNS entry for hostname {hostname} already exists. No new entry created.")
+        return
+
     new_entry = {
         "status": "enable",
         "type": "A",
@@ -60,17 +79,47 @@ def dns_update():
         "ip": ip,
         "hostname": hostname
     }
-    dns_entries.append(new_entry)
 
-    put_data = {"name": DATABASE_NAME, "dns-entry": dns_entries}
+    dns_data.append(new_entry)
+    put_data = {"name": DATABASE_NAME, "dns-entry": dns_data}
 
-    response = requests.put(f'{FGT_URL}{DATABASE_NAME}', json=put_data, headers=headers, verify=False)
-    print(f"PUT Response: {response.text}") # Print PUT response
+    response = requests.put(f'{FGT_DNS_URL}{DATABASE_NAME}', json=put_data, headers=headers, verify=False)
 
-    if response.status_code != 200:
-        return jsonify({'message': 'Failed to create record'}), 500
 
-    return jsonify({'message': 'Record created successfully'}), 201
+def delete_dns_entry(id):
+    response = requests.delete(f'{FGT_DNS_URL}{DATABASE_NAME}/{id}', headers=headers, verify=False)
+
+@app.route('/dns_update', methods=['POST'])
+def dns_update():
+    data = request.json
+
+    # Check if required data is present
+    if not all(key in data for key in ('ip', 'hostname')):
+        return jsonify({'message': 'Invalid data, ip and hostname are required'}), 400
+
+    ip = data['ip']
+    hostname = data['hostname']
+
+    dns_data = get_dns_data()
+
+    matching_dns_entries = [entry for entry in dns_data if entry['ip'] == ip]
+
+    if matching_dns_entries:
+        for dns_entry in matching_dns_entries:
+            if dns_entry['hostname'] != hostname:
+                # Delete old entry and add new one
+                delete_dns_entry(dns_entry['id'])
+
+    add_dns_entry(ip, hostname)
+
+    return jsonify({'message': 'Record updated successfully'}), 200
 
 if __name__ == '__main__':
+    # Start the comparison function
+    scheduler.enter(0, 1, compare_and_update)
+
+    # Start the scheduler in a new thread
+    thread = Thread(target=run_scheduler)
+    thread.start()
+
     app.run(host='0.0.0.0', debug=True)
