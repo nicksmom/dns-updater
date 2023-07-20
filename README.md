@@ -96,8 +96,8 @@ end
 2. Set the API_TOKEN environment variable: `export API_TOKEN=your_api_token_here`.
 3. Clone repository: `git clone https://github.com/nicksmom/dns-updater.git`
 4. Set the DATABASE_NAME environment variable: `export DATABASE_NAME=localdb`
-5. Set the FGT_DNS_URL environment variable: `export FGT_URL=https://192.168.1.1/api/v2/cmdb/system/dns-database/`
-6. Set the FGT_DHCP_URL environment variable: `export FGT_DHCP_URL=https://192.168.1.1/api/v2/monitor/dhcp/`
+5. Set the FGT_DNS_URL environment variable: `export FGT_DNS_URL=https://192.168.1.1/api/v2/cmdb/system/dns-database/`
+6. Set the FGT_DHCP_URL environment variable: `export FGT_DHCP_URL=https://192.168.1.1/api/v2/monitor/system/dhcp/`
 7. Make sure the script is executable: `chmod +x dns_updater.py`.
 
 ## Enable as a Service
@@ -115,7 +115,7 @@ User=pi
 Environment="API_TOKEN=your_api_token"
 Environment="DATABASE_NAME=my_database"
 Environment="FGT_DNS_URL=https://192.168.1.1/api/v2/cmdb/system/dns-database/"
-Environment="FGT_DHCP_URL=https://192.168.1.1/api/v2/monitor/dhcp/"
+Environment="FGT_DHCP_URL=https://192.168.1.1/api/v2/monitor/system/dhcp/"
 
 [Install]
 WantedBy=multi-user.target
