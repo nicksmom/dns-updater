@@ -67,9 +67,10 @@ def add_dns_entry(ip, hostname):
 
     # Check if a DNS entry with the same hostname already exists
     matching_dns_entries = [entry for entry in dns_data if entry['hostname'] == hostname]
-    if matching_dns_entries:
-        print(f"DNS entry for hostname {hostname} already exists. No new entry created.")
-        return
+    for dns_entry in matching_dns_entries:
+        # Delete the old entry
+        delete_dns_entry(dns_entry['id'])
+        print(f"Deleted existing DNS entry for hostname {hostname}.")
 
     new_entry = {
         "status": "enable",
@@ -84,6 +85,7 @@ def add_dns_entry(ip, hostname):
     put_data = {"name": DATABASE_NAME, "dns-entry": dns_data}
 
     response = requests.put(f'{FGT_DNS_URL}{DATABASE_NAME}', json=put_data, headers=headers, verify=False)
+    print(f"Added new DNS entry for hostname {hostname} with IP {ip}.")
 
 
 def delete_dns_entry(id):
