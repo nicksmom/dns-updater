@@ -27,13 +27,15 @@ def run_scheduler():
 def get_dhcp_data():
     response = requests.get(FGT_DHCP_URL, headers=headers, verify=False)
     data = response.json()
-    return data['results']
+    print("DHCP Data:", data)  # Print the full data
+    return data.get('results', [])
 
 def get_dns_data():
     response = requests.get(f'{FGT_DNS_URL}{DATABASE_NAME}', headers=headers, verify=False)
     return response.json()['results'][0]['dns-entry']
 
 def compare_and_update():
+    print("Running scheduled task: compare_and_update")  # Debug print statement
     dhcp_data = get_dhcp_data()
     dns_data = get_dns_data()
 
