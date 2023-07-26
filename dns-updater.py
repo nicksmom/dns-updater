@@ -7,7 +7,7 @@ requests.packages.urllib3.disable_warnings()
 
 # API endpoints
 FGT_DNS_URL = os.getenv('FGT_DNS_URL', 'https://192.168.1.1/api/v2/cmdb/system/dns-database/')
-FGT_DHCP_URL = os.getenv('FGT_DHCP_URL', 'https://192.168.1.1/api/v2/monitor/dhcp')
+FGT_DHCP_URL = os.getenv('FGT_DHCP_URL', 'https://192.168.1.1/api/v2/monitor/system/dhcp')
 
 # The Fortigate database name and API token should be stored securely
 DATABASE_NAME = os.getenv('DATABASE_NAME', 'local')  # default to 'local' if DATABASE_NAME is not set
