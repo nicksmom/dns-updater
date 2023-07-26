@@ -1,129 +1,79 @@
 import os
-import json
 import requests
-import sched, time
-from flask import Flask, request, jsonify
-from threading import Thread
+import time
 
 # Disable SSL warnings
 requests.packages.urllib3.disable_warnings()
 
-app = Flask(__name__)
-
-# URLs and database name
-DATABASE_NAME = os.getenv('DATABASE_NAME', 'local')
+# API endpoints
 FGT_DNS_URL = os.getenv('FGT_DNS_URL', 'https://192.168.1.1/api/v2/cmdb/system/dns-database/')
 FGT_DHCP_URL = os.getenv('FGT_DHCP_URL', 'https://192.168.1.1/api/v2/monitor/dhcp')
-API_TOKEN = os.getenv('API_TOKEN')
+
+# The Fortigate database name and API token should be stored securely
+DATABASE_NAME = os.getenv('DATABASE_NAME', 'local')  # default to 'local' if DATABASE_NAME is not set
+API_TOKEN = os.getenv("API_TOKEN")
 
 headers = {'Authorization': f'Bearer {API_TOKEN}'}
-
-scheduler = sched.scheduler(time.time, time.sleep)
-
-# Define a function to run the scheduler
-def run_scheduler():
-    scheduler.run()
 
 def get_dhcp_data():
     response = requests.get(FGT_DHCP_URL, headers=headers, verify=False)
     data = response.json()
-    print("DHCP Data:", data)  # Print the full data
     return data.get('results', [])
 
-def get_dns_data():
-    response = requests.get(f'{FGT_DNS_URL}{DATABASE_NAME}', headers=headers, verify=False)
-    return response.json()['results'][0]['dns-entry']
+def delete_dns_database():
+    response = requests.delete(f'{FGT_DNS_URL}{DATABASE_NAME}', headers=headers, verify=False)
+    if response.status_code not in [200, 204]:  # accept both 200 and 204 as successful status codes
+        print(f"Failed to delete DNS database {DATABASE_NAME}. Response: {response.text}")
+    else:
+        print(f"Deleted DNS database {DATABASE_NAME}")
 
-def compare_and_update():
-    print("Running scheduled task: compare_and_update")  # Debug print statement
-    dhcp_data = get_dhcp_data()
-    dns_data = get_dns_data()
-
-    for dhcp_entry in dhcp_data:
-        dhcp_ip = dhcp_entry['ip']
-        
-        # Check if 'hostname' key exists
-        if 'hostname' in dhcp_entry:
-            dhcp_hostname = dhcp_entry['hostname']
-        else:
-            # If 'hostname' key doesn't exist, skip this iteration
-            continue
-
-        matching_dns_entries = [entry for entry in dns_data if entry['ip'] == dhcp_ip]
-
-        if not matching_dns_entries:
-            # Add new DNS entry
-            add_dns_entry(dhcp_ip, dhcp_hostname)
-        else:
-            for dns_entry in matching_dns_entries:
-                if dns_entry['hostname'] != dhcp_hostname:
-                    # Delete old entry and add new one
-                    delete_dns_entry(dns_entry['id'])
-                    add_dns_entry(dhcp_ip, dhcp_hostname)
-
-    # Schedule next run
-    scheduler.enter(180, 1, compare_and_update)
-
-def add_dns_entry(ip, hostname):
-    dns_data = get_dns_data()
-
-    # Check if a DNS entry with the same hostname already exists
-    matching_dns_entries = [entry for entry in dns_data if entry['hostname'] == hostname]
-    for dns_entry in matching_dns_entries:
-        # Delete the old entry
-        delete_dns_entry(dns_entry['id'])
-        print(f"Deleted existing DNS entry for hostname {hostname}.")
-
-    new_entry = {
-        "status": "enable",
-        "type": "A",
-        "ttl": 1800,
-        "preference": 65535,
-        "ip": ip,
-        "hostname": hostname
+def create_dns_database():
+    new_db_data = {
+        "name": DATABASE_NAME,
+        "domain": "localdomain",
+        "ttl": 300
     }
+    response = requests.post(FGT_DNS_URL, json=new_db_data, headers=headers, verify=False)
+    if response.status_code != 200:
+        print(f"Failed to create DNS database {DATABASE_NAME}. Response: {response.text}")
+    else:
+        print(f"Created DNS database {DATABASE_NAME}")
 
-    dns_data.append(new_entry)
-    put_data = {"name": DATABASE_NAME, "dns-entry": dns_data}
+def update_dns_database():
+    dhcp_data = get_dhcp_data()
+    
+    # Delete the DNS database
+    delete_dns_database()
 
+    # Wait for 3 seconds
+    time.sleep(3)
+
+    # Create a new DNS database
+    create_dns_database()
+
+    # Prepare data for DNS entries based on DHCP data
+    dns_entries = []
+    for dhcp_entry in dhcp_data:
+        ip = dhcp_entry.get('ip', None)
+        hostname = dhcp_entry.get('hostname', None)
+        # Only add a DNS entry if both the IP and hostname are present
+        if ip and hostname:
+            new_entry = {
+                "status": "enable",
+                "type": "A",
+                "ttl": 300,
+                "preference": 65535,
+                "ip": ip,
+                "hostname": hostname
+            }
+            dns_entries.append(new_entry)
+
+    # Update DNS database with new entries
+    put_data = {"name": DATABASE_NAME, "dns-entry": dns_entries}
     response = requests.put(f'{FGT_DNS_URL}{DATABASE_NAME}', json=put_data, headers=headers, verify=False)
-    print(f"Added new DNS entry for hostname {hostname} with IP {ip}.")
-
-
-def delete_dns_entry(id):
-    response = requests.delete(f'{FGT_DNS_URL}{DATABASE_NAME}/{id}', headers=headers, verify=False)
-
-@app.route('/dns_update', methods=['POST'])
-def dns_update():
-    data = request.json
-
-    # Check if required data is present
-    if not all(key in data for key in ('ip', 'hostname')):
-        return jsonify({'message': 'Invalid data, ip and hostname are required'}), 400
-
-    ip = data['ip']
-    hostname = data['hostname']
-
-    dns_data = get_dns_data()
-
-    matching_dns_entries = [entry for entry in dns_data if entry['ip'] == ip]
-
-    if matching_dns_entries:
-        for dns_entry in matching_dns_entries:
-            if dns_entry['hostname'] != hostname:
-                # Delete old entry and add new one
-                delete_dns_entry(dns_entry['id'])
-
-    add_dns_entry(ip, hostname)
-
-    return jsonify({'message': 'Record updated successfully'}), 200
+    print(f"Added new DNS entries.")
 
 if __name__ == '__main__':
-    # Start the comparison function
-    scheduler.enter(0, 1, compare_and_update)
-
-    # Start the scheduler in a new thread
-    thread = Thread(target=run_scheduler)
-    thread.start()
-
-    app.run(host='0.0.0.0', debug=True)
+    while True:
+        update_dns_database()
+        time.sleep(305)  # Wait for 305 seconds before the next iteration
