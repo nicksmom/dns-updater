@@ -75,5 +75,8 @@ def update_dns_database():
 
 if __name__ == '__main__':
     while True:
-        update_dns_database()
+        try:
+            update_dns_database()
+        except Exception as e:
+            print(f"An error occurred during the execution of update_dns_database: {e}")
         time.sleep(305)  # Wait for 305 seconds before the next iteration
