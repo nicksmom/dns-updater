@@ -1,16 +1,17 @@
 import os
 import requests
 import time
+from prettytable import PrettyTable
 
 # Disable SSL warnings
 requests.packages.urllib3.disable_warnings()
 
 # API endpoints
 FGT_DNS_URL = os.getenv('FGT_DNS_URL', 'https://192.168.1.1/api/v2/cmdb/system/dns-database/')
-FGT_DHCP_URL = os.getenv('FGT_DHCP_URL', 'https://192.168.1.1/api/v2/monitor/system/dhcp')
+FGT_DHCP_URL = os.getenv('FGT_DHCP_URL', 'https://192.168.1.1/api/v2/monitor/dhcp')
 
 # The Fortigate database name and API token should be stored securely
-DATABASE_NAME = os.getenv('DATABASE_NAME', 'local')  # default to 'local' if DATABASE_NAME is not set
+DATABASE_NAME = os.getenv('DATABASE_NAME', 'local')
 API_TOKEN = os.getenv("API_TOKEN")
 
 headers = {'Authorization': f'Bearer {API_TOKEN}'}
@@ -22,7 +23,7 @@ def get_dhcp_data():
 
 def delete_dns_database():
     response = requests.delete(f'{FGT_DNS_URL}{DATABASE_NAME}', headers=headers, verify=False)
-    if response.status_code not in [200, 204]:  # accept both 200 and 204 as successful status codes
+    if response.status_code not in [200, 204]:
         print(f"Failed to delete DNS database {DATABASE_NAME}. Response: {response.text}")
     else:
         print(f"Deleted DNS database {DATABASE_NAME}")
@@ -38,6 +39,16 @@ def create_dns_database():
         print(f"Failed to create DNS database {DATABASE_NAME}. Response: {response.text}")
     else:
         print(f"Created DNS database {DATABASE_NAME}")
+
+def save_to_file(data):
+    table = PrettyTable()
+    table.field_names = ["Status", "Type", "TTL", "Preference", "IP", "Hostname"]
+
+    for entry in data:
+        table.add_row([entry["status"], entry["type"], entry["ttl"], entry["preference"], entry["ip"], entry["hostname"]])
+
+    with open("/opt/hosts.txt", "w") as f:
+        f.write(str(table))
 
 def update_dns_database():
     dhcp_data = get_dhcp_data()
@@ -56,7 +67,6 @@ def update_dns_database():
     for dhcp_entry in dhcp_data:
         ip = dhcp_entry.get('ip', None)
         hostname = dhcp_entry.get('hostname', None)
-        # Only add a DNS entry if both the IP and hostname are present
         if ip and hostname:
             new_entry = {
                 "status": "enable",
@@ -71,6 +81,10 @@ def update_dns_database():
     # Update DNS database with new entries
     put_data = {"name": DATABASE_NAME, "dns-entry": dns_entries}
     response = requests.put(f'{FGT_DNS_URL}{DATABASE_NAME}', json=put_data, headers=headers, verify=False)
+    
+    # Save the DNS entries to file in PrettyTable format
+    save_to_file(dns_entries)
+    
     print(f"Added new DNS entries.")
 
 if __name__ == '__main__':
